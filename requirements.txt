@@ -1,0 +1,14 @@
+fastapi==0.104.1
+uvicorn==0.24.0
+earthengine-api==0.1.374
+google-auth==2.23.4
+geopandas==0.14.1
+pandas==2.1.4
+numpy==1.24.3
+requests==2.31.0
+shapely==2.0.2
+scipy==1.11.4
+tqdm==4.66.1
+schedule==1.2.0
+fiona==1.9.5
+pyogrio==0.7.2

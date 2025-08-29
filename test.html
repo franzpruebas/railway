@@ -1,0 +1,487 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Índice de Sequedad Ecuador</title>
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <style>
+        body {
+            margin: 0;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        }
+        
+        .header {
+            background: linear-gradient(135deg, #2c3e50, #3498db);
+            color: white;
+            padding: 15px;
+            text-align: center;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.3);
+        }
+        
+        .controls {
+            position: absolute;
+            top: 80px;
+            left: 15px;
+            z-index: 1000;
+            background: white;
+            padding: 20px;
+            border-radius: 12px;
+            box-shadow: 0 8px 25px rgba(0,0,0,0.3);
+            width: 320px;
+            border-left: 4px solid #e74c3c;
+        }
+        
+        .btn {
+            width: 100%;
+            padding: 12px;
+            margin: 8px 0;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            font-weight: bold;
+            font-size: 14px;
+            transition: all 0.3s ease;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+        }
+        
+        .btn-primary {
+            background: linear-gradient(135deg, #3498db, #2980b9);
+            color: white;
+        }
+        
+        .btn-success {
+            background: linear-gradient(135deg, #27ae60, #229954);
+            color: white;
+        }
+        
+        .btn-warning {
+            background: linear-gradient(135deg, #f39c12, #e67e22);
+            color: white;
+        }
+        
+        .btn-danger {
+            background: linear-gradient(135deg, #e74c3c, #c0392b);
+            color: white;
+        }
+        
+        .btn:hover:not(:disabled) {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(0,0,0,0.2);
+        }
+        
+        .btn:disabled {
+            background: #bdc3c7 !important;
+            cursor: not-allowed;
+            transform: none;
+            color: #7f8c8d;
+        }
+        
+        #map { 
+            height: calc(100vh - 70px);
+        }
+        
+        .cache-status {
+            background: #f8f9fa;
+            border: 1px solid #dee2e6;
+            border-radius: 6px;
+            padding: 12px;
+            margin: 10px 0;
+            font-size: 13px;
+        }
+        
+        .cache-status.available {
+            background: #d4edda;
+            border-color: #c3e6cb;
+            color: #155724;
+        }
+        
+        .cache-status.unavailable {
+            background: #fff3cd;
+            border-color: #ffeaa7;
+            color: #856404;
+        }
+        
+        .cache-status.processing {
+            background: #d1ecf1;
+            border-color: #bee5eb;
+            color: #0c5460;
+        }
+        
+        .status {
+            margin: 10px 0;
+            padding: 10px;
+            border-radius: 6px;
+            font-size: 13px;
+        }
+        
+        .status.success {
+            background: #d4edda;
+            color: #155724;
+            border: 1px solid #c3e6cb;
+        }
+        
+        .status.error {
+            background: #f8d7da;
+            color: #721c24;
+            border: 1px solid #f5c6cb;
+        }
+        
+        .status.info {
+            background: #d1ecf1;
+            color: #0c5460;
+            border: 1px solid #bee5eb;
+        }
+        
+        .legend {
+            position: absolute;
+            bottom: 20px;
+            left: 20px;
+            background: white;
+            padding: 15px;
+            border-radius: 10px;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.2);
+            z-index: 1000;
+            display: none;
+        }
+        
+        .legend h6 {
+            margin: 0 0 12px 0;
+            font-weight: bold;
+            color: #2c3e50;
+        }
+        
+        .legend-item {
+            display: flex;
+            align-items: center;
+            margin: 5px 0;
+            font-size: 13px;
+        }
+        
+        .legend-color {
+            width: 20px;
+            height: 15px;
+            margin-right: 8px;
+            border-radius: 3px;
+            border: 1px solid #ddd;
+        }
+        
+        .loading {
+            display: none;
+            text-align: center;
+            margin: 15px 0;
+        }
+        
+        .spinner {
+            border: 3px solid #f3f3f3;
+            border-top: 3px solid #3498db;
+            border-radius: 50%;
+            width: 24px;
+            height: 24px;
+            animation: spin 1s linear infinite;
+            margin: 0 auto 8px;
+        }
+        
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+        
+        .progress-bar {
+            width: 100%;
+            height: 4px;
+            background: #ecf0f1;
+            border-radius: 2px;
+            overflow: hidden;
+            margin-top: 10px;
+        }
+        
+        .progress {
+            height: 100%;
+            background: linear-gradient(45deg, #3498db, #2980b9);
+            width: 0%;
+            transition: width 0.3s ease;
+            animation: progress-animation 2s infinite;
+        }
+        
+        @keyframes progress-animation {
+            0% { width: 0%; }
+            50% { width: 70%; }
+            100% { width: 100%; }
+        }
+        
+        .info-box {
+            background: #e8f4fd;
+            border: 1px solid #b3d9f7;
+            color: #31708f;
+            padding: 12px;
+            border-radius: 6px;
+            font-size: 12px;
+            margin: 10px 0;
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <h2><i class="fas fa-fire"></i> Índice de Sequedad Ecuador</h2>
+        <p>Sistema de monitoreo con cache inteligente</p>
+    </div>
+
+    <div class="controls">
+        <h5 style="margin-top: 0; color: #2c3e50; display: flex; align-items: center; gap: 8px;">
+            <i class="fas fa-tachometer-alt"></i> Panel de Control
+        </h5>
+        
+        <div id="cacheStatus" class="cache-status">
+            <i class="fas fa-clock"></i> Verificando estado del cache...
+        </div>
+        
+        <button id="loadFromCache" class="btn btn-success">
+            <i class="fas fa-bolt"></i> Cargar Sequedad (Rápido)
+        </button>
+        
+        <button id="updateData" class="btn btn-warning">
+            <i class="fas fa-sync-alt"></i> Actualizar Datos (Lento)
+        </button>
+        
+        <button id="clearMap" class="btn btn-primary">
+            <i class="fas fa-eraser"></i> Limpiar Mapa
+        </button>
+        
+        <button id="checkCache" class="btn btn-primary" style="background: linear-gradient(135deg, #95a5a6, #7f8c8d);">
+            <i class="fas fa-info-circle"></i> Estado Cache
+        </button>
+        
+        <div class="info-box">
+            <strong><i class="fas fa-lightbulb"></i> Cómo usar:</strong><br>
+            • <strong>Cargar Sequedad:</strong> Instantáneo si hay cache<br>
+            • <strong>Actualizar Datos:</strong> Procesa datos nuevos (1-2 min)<br>
+            • Use "Actualizar" solo cuando necesite datos frescos
+        </div>
+        
+        <div id="loading" class="loading">
+            <div class="spinner"></div>
+            <small id="loadingText">Procesando...</small>
+            <div class="progress-bar">
+                <div class="progress"></div>
+            </div>
+        </div>
+        
+        <div id="status"></div>
+    </div>
+
+    <div id="legend" class="legend">
+        <h6><i class="fas fa-thermometer-half"></i> <span id="legendTitle">Nivel de Sequedad</span></h6>
+        <div id="legendContent"></div>
+    </div>
+
+    <div id="map"></div>
+
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <script>
+        // Configuración
+        const API_BASE = 'https://railway-production-77c4.up.railway.app';
+        
+        // Mapa centrado en Ecuador
+        const map = L.map('map').setView([-1.8312, -78.1834], 7);
+        
+        // Mapa base
+        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+            attribution: '© OpenStreetMap contributors'
+        }).addTo(map);
+        
+        // Variables globales
+        let currentLayer = null;
+        const loadingElement = document.getElementById('loading');
+        const statusElement = document.getElementById('status');
+        const legendElement = document.getElementById('legend');
+        const cacheStatusElement = document.getElementById('cacheStatus');
+        const loadingText = document.getElementById('loadingText');
+        
+        // Funciones auxiliares
+        function showLoading(text = 'Procesando...') {
+            loadingElement.style.display = 'block';
+            loadingText.textContent = text;
+            document.getElementById('loadFromCache').disabled = true;
+            document.getElementById('updateData').disabled = true;
+        }
+        
+        function hideLoading() {
+            loadingElement.style.display = 'none';
+            document.getElementById('loadFromCache').disabled = false;
+            document.getElementById('updateData').disabled = false;
+        }
+        
+        function showStatus(message, type = 'success') {
+            statusElement.innerHTML = `<div class="status ${type}">${message}</div>`;
+            setTimeout(() => {
+                statusElement.innerHTML = '';
+            }, 8000);
+        }
+        
+        function updateCacheStatus(data) {
+            let html, className;
+            
+            if (data.processing) {
+                html = `<i class="fas fa-cog fa-spin"></i> <strong>Procesando datos...</strong><br><small>Espere unos minutos</small>`;
+                className = 'processing';
+            } else if (data.cache_available) {
+                const ageText = data.cache_age_minutes < 1 ? 'Recién actualizado' : `${Math.round(data.cache_age_minutes)} min de antigüedad`;
+                html = `<i class="fas fa-check-circle"></i> <strong>Cache disponible</strong><br><small>${ageText}</small>`;
+                className = 'available';
+            } else {
+                html = `<i class="fas fa-exclamation-triangle"></i> <strong>Sin cache</strong><br><small>Debe actualizar datos primero</small>`;
+                className = 'unavailable';
+            }
+            
+            cacheStatusElement.innerHTML = html;
+            cacheStatusElement.className = `cache-status ${className}`;
+        }
+        
+        function clearCurrentLayer() {
+            if (currentLayer) {
+                map.removeLayer(currentLayer);
+                currentLayer = null;
+            }
+            legendElement.style.display = 'none';
+        }
+        
+        function showLegend(legend) {
+            const legendContent = document.getElementById('legendContent');
+            const legendTitle = document.getElementById('legendTitle');
+            
+            legendTitle.textContent = legend.title || 'Nivel de Sequedad';
+            legendContent.innerHTML = '';
+            
+            legend.labels.forEach((label, index) => {
+                const item = document.createElement('div');
+                item.className = 'legend-item';
+                item.innerHTML = `
+                    <div class="legend-color" style="background-color: #${legend.colors[index]}"></div>
+                    <span>${label}</span>
+                `;
+                legendContent.appendChild(item);
+            });
+            
+            legendElement.style.display = 'block';
+        }
+        
+        async function checkCacheStatus() {
+            try {
+                const response = await fetch(`${API_BASE}/cache-status`);
+                const data = await response.json();
+                updateCacheStatus(data);
+                return data;
+            } catch (error) {
+                updateCacheStatus({cache_available: false, processing: false});
+                return {cache_available: false, processing: false};
+            }
+        }
+        
+        // Event Listeners
+        document.getElementById('loadFromCache').addEventListener('click', async () => {
+            showLoading('Cargando desde cache...');
+            clearCurrentLayer();
+            
+            try {
+                const response = await fetch(`${API_BASE}/sequedad-cache`);
+                const data = await response.json();
+                
+                if (!data.success) {
+                    showStatus(`⚠️ ${data.error || data.message}`, 'error');
+                    return;
+                }
+                
+                // Agregar capa al mapa
+                currentLayer = L.tileLayer(data.tile_url, {
+                    opacity: 0.7,
+                    attribution: 'Google Earth Engine | Cache'
+                }).addTo(map);
+                
+                // Mostrar leyenda
+                if (data.legend) {
+                    showLegend(data.legend);
+                }
+                
+                const cacheInfo = data.from_cache ? ` (Cache: ${data.cache_age_minutes} min)` : '';
+                showStatus(`✅ Sequedad cargada exitosamente${cacheInfo}`, 'success');
+                
+                // Actualizar estado del cache
+                checkCacheStatus();
+                
+            } catch (error) {
+                showStatus(`❌ Error: ${error.message}`, 'error');
+            } finally {
+                hideLoading();
+            }
+        });
+        
+        document.getElementById('updateData').addEventListener('click', async () => {
+            showLoading('Procesando nuevos datos satelitales... (1-2 min)');
+            clearCurrentLayer();
+            
+            try {
+                showStatus('🛰️ Descargando datos de NASA y ECMWF...', 'info');
+                
+                const response = await fetch(`${API_BASE}/actualizar-sequedad`);
+                const data = await response.json();
+                
+                if (!data.success) {
+                    showStatus(`❌ Error: ${data.error}`, 'error');
+                    return;
+                }
+                
+                // Agregar capa al mapa
+                currentLayer = L.tileLayer(data.tile_url, {
+                    opacity: 0.7,
+                    attribution: 'Google Earth Engine | Datos Actualizados'
+                }).addTo(map);
+                
+                // Mostrar leyenda
+                if (data.legend) {
+                    showLegend(data.legend);
+                }
+                
+                showStatus(`✅ Datos actualizados y guardados en cache`, 'success');
+                
+                // Actualizar estado del cache
+                checkCacheStatus();
+                
+            } catch (error) {
+                showStatus(`❌ Error procesando: ${error.message}`, 'error');
+            } finally {
+                hideLoading();
+            }
+        });
+        
+        document.getElementById('clearMap').addEventListener('click', () => {
+            clearCurrentLayer();
+            showStatus('🗑️ Mapa limpiado', 'info');
+        });
+        
+        document.getElementById('checkCache').addEventListener('click', async () => {
+            showLoading('Verificando cache...');
+            const data = await checkCacheStatus();
+            
+            let message = data.cache_available ? 
+                `📊 Cache disponible (${Math.round(data.cache_age_minutes || 0)} min)` : 
+                '📊 Sin cache disponible';
+                
+            showStatus(message, 'info');
+            hideLoading();
+        });
+        
+        // Verificar estado inicial
+        window.addEventListener('load', async () => {
+            await checkCacheStatus();
+            showStatus('🚀 Sistema de cache listo', 'success');
+        });
+        
+        // Auto-refresh del estado cada 30 segundos
+        setInterval(checkCacheStatus, 30000);
+    </script>
+</body>
+</html>
